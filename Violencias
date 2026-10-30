@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actividad Interactiva: Clasificación de Tipos de Violencia</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        genially: {
+                            purple: '#4f46e5',
+                            pink: '#ec4899',
+                            teal: '#14b8a6',
+                            dark: '#0f172a',
+                        }
+                    },
+                    boxShadow: {
+                        'genially': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        'glow': '0 0 15px rgba(99, 102, 241, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #31103f 100%);
+            min-height: 100vh;
+            color: #f8fafc;
+            user-select: none;
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-3px) scale(1.01);
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
+        }
+
+        /* Drag and drop visuals */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .drag-over {
+            border-color: #6366f1 !important;
+            background: rgba(99, 102, 241, 0.2) !important;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Touch dragging active clone */
+        .touch-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.9;
+            transform: scale(1.05) rotate(2deg);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            transition: transform 0.05s ease;
+        }
+
+        /* Animation utilities */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(236, 72, 153, 0.8); }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen font-sans p-4 md:p-8">
+
+    <!-- Header / Genially Nav Bar -->
+    <header class="max-w-7xl mx-auto w-full glass-panel rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                <i class="fa-solid fa-shapes"></i>
+            </div>
+            <div>
+                <span class="text-xs font-semibold tracking-wider text-indigo-300 uppercase block">Actividad Interactiva</span>
+                <h1 class="text-xl md:text-2xl font-extrabold text-white">Triángulo de las Violencias</h1>
+            </div>
+        </div>
+
+        <!-- Progress and Action Controls -->
+        <div class="flex items-center space-x-3 ml-auto">
+            <div class="glass-panel px-4 py-2 rounded-xl flex items-center space-x-3">
+                <i class="fa-solid fa-bullseye text-pink-400"></i>
+                <span class="text-sm text-slate-300 font-medium">Progreso:</span>
+                <span id="progress-text" class="text-lg font-bold text-white">0/9</span>
+            </div>
+            
+            <button id="reset-btn" onclick="resetActivity()" class="glass-panel hover:bg-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl transition flex items-center space-x-2 text-sm font-medium">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span class="hidden sm:inline">Reiniciar</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
+
+        <!-- Instruction Banner -->
+        <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-pink-500 flex items-center justify-between gap-4 shadow-lg">
+            <div class="flex items-start space-x-3">
+                <div class="text-pink-400 text-xl mt-0.5">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <p class="text-slate-200 text-sm md:text-base leading-relaxed">
+                    <strong class="text-white font-semibold">Instrucción para participantes:</strong> Lee cada situación y arrástrala al tipo de violencia con el que se relaciona principalmente.
+                </p>
+            </div>
+        </div>
+
+        <!-- Content Grid: Cards Column + Categories Column -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+            
+            <!-- Cards Container (Left Side on LG) -->
+            <div class="lg:col-span-5 glass-panel p-5 rounded-2xl flex flex-col gap-4 min-h-[420px]">
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <h2 class="text-base font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i> Situaciones a Clasificar
+                    </h2>
+                    <span id="remaining-count" class="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-1 rounded-full font-bold">
+                        9 pendientes
+                    </span>
+                </div>
+
+                <!-- Scrollable Cards Pool -->
+                <div id="situations-pool" class="flex flex-col gap-3 min-h-[320px] max-h-[580px] overflow-y-auto pr-1">
+                    <!-- Cards will be injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Drop Zones Grid (Right Side on LG) -->
+            <div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Zone 1: Violencia Directa -->
+                <div class="drop-zone glass-panel p-4 rounded-2xl flex flex-col gap-3 min-h-[380px] transition-all border-2 border-dashed border-red-500/30 hover:border-red-500/60" data-category="directa">
+                    <div class="bg-gradient-to-r from-red-500/20 to-orange-500/20 p-3 rounded-xl border border-red-500/30 text-center">
+                        <span class="p-2 bg-red-500/30 text-red-300 rounded-lg inline-block mb-1">
+                            <i class="fa-solid fa-hand-fist text-lg"></i>
+                        </span>
+                        <h3 class="font-bold text-white text-base">Violencia Directa</h3>
+                        <p class="text-xs text-red-200/70 mt-1">Acciones físicas o verbales visibles e inmediatas</p>
+                    </div>
+                    <div class="drop-container flex-1 flex flex-col gap-2 p-1 min-h-[200px]" data-category="directa">
+                        <!-- Placed items will go here -->
+                    </div>
+                </div>
+
+                <!-- Zone 2: Violencia Estructural -->
+                <div class="drop-zone glass-panel p-4 rounded-2xl flex flex-col gap-3 min-h-[380px] transition-all border-2 border-dashed border-amber-500/30 hover:border-amber-500/60" data-category="estructural">
+                    <div class="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 p-3 rounded-xl border border-amber-500/30 text-center">
+                        <span class="p-2 bg-amber-500/30 text-amber-300 rounded-lg inline-block mb-1">
+                            <i class="fa-solid fa-building-columns text-lg"></i>
+                        </span>
+                        <h3 class="font-bold text-white text-base">Violencia Estructural</h3>
+                        <p class="text-xs text-amber-200/70 mt-1">Sistemas, leyes o barreras institucionales</p>
+                    </div>
+                    <div class="drop-container flex-1 flex flex-col gap-2 p-1 min-h-[200px]" data-category="estructural">
+                        <!-- Placed items will go here -->
+                    </div>
+                </div>
+
+                <!-- Zone 3: Violencia Simbolica -->
+                <div class="drop-zone glass-panel p-4 rounded-2xl flex flex-col gap-3 min-h-[380px] transition-all border-2 border-dashed border-purple-500/30 hover:border-purple-500/60" data-category="cultural">
+                    <div class="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-3 rounded-xl border border-purple-500/30 text-center">
+                        <span class="p-2 bg-purple-500/30 text-purple-300 rounded-lg inline-block mb-1">
+                            <i class="fa-solid fa-brain text-lg"></i>
+                        </span>
+                        <h3 class="font-bold text-white text-base">Violencia Cultural</h3>
+                        <p class="text-xs text-purple-200/70 mt-1">Normas, prejuicios y creencias legitimadas</p>
+                    </div>
+                    <div class="drop-container flex-1 flex flex-col gap-2 p-1 min-h-[200px]" data-category="cultural">
+                        <!-- Placed items will go here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="glass-panel p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-center space-x-2 text-xs text-slate-400">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-base"></i>
+                <span>Puedes arrastrar los elementos entre columnas para reorganizarlos en cualquier momento.</span>
+            </div>
+            
+            <button id="verify-btn" onclick="verifyAnswers()" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-bold text-base shadow-lg hover:shadow-indigo-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Verificar Respuestas</span>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal Feedback Result -->
+    <div id="result-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl border border-white/20 text-center shadow-2xl transform scale-90 transition-all duration-300" id="modal-content">
+            
+            <div id="modal-icon" class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl shadow-xl">
+                <!-- Icon injected -->
+            </div>
+
+            <h3 id="modal-title" class="text-2xl font-extrabold text-white mb-2"></h3>
+            <p id="modal-description" class="text-slate-300 text-sm mb-6 leading-relaxed"></p>
+
+            <div class="bg-slate-900/60 rounded-2xl p-4 mb-6 border border-white/5 flex justify-around">
+                <div class="text-center">
+                    <span class="block text-xs text-slate-400 uppercase font-semibold">Correctas</span>
+                    <span id="score-correct" class="text-2xl font-black text-emerald-400">0</span>
+                </div>
+                <div class="w-px bg-white/10"></div>
+                <div class="text-center">
+                    <span class="block text-xs text-slate-400 uppercase font-semibold">Incorrectas</span>
+                    <span id="score-incorrect" class="text-2xl font-black text-rose-400">0</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-3 px-4 rounded-xl glass-panel hover:bg-white/10 text-slate-200 font-semibold text-sm transition">
+                    Revisar Respuestas
+                </button>
+                <button onclick="resetActivity(); closeModal();" class="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition shadow-lg shadow-indigo-600/30">
+                    Intentar de nuevo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Data Source derived directly from specification
+        const situationsData = [
+            { id: '1', text: 'Una persona recibe insultos durante una reunión.', category: 'directa' },
+            { id: '2', text: 'Una jefatura amenaza injustificadamente con despedir a alguien.', category: 'directa' },
+            { id: '3', text: 'Una persona recibe comentarios sexuales no deseados.', category: 'directa' },
+            { id: '4', text: 'Existen barreras físicas que impiden la participación de personas con discapacidad.', category: 'estructural' },
+            { id: '5', text: 'Un procedimiento excluye injustificadamente a determinados grupos del acceso a oportunidades.', category: 'estructural' },
+            { id: '6', text: 'Se presentan desigualdades salariales por motivos de género.', category: 'estructural' },
+            { id: '7', text: 'Se considera que las mujeres no tienen capacidad para ejercer cargos directivos.', category: 'cultural' },
+            { id: '8', text: 'Se justifica que los hombres no expresen sus emociones porque «deben ser fuertes».', category: 'cultural' },
+            { id: '9', text: 'Se normalizan bromas que ridiculizan a personas por su orientación sexual.', category: 'cultural' }
+        ];
+
+        let draggedElement = null;
+        let touchActiveElement = null;
+        let touchGhost = null;
+
+        // Initialize activity
+        document.addEventListener('DOMContentLoaded', () => {
+            initActivity();
+        });
+
+        function initActivity() {
+            const pool = document.getElementById('situations-pool');
+            pool.innerHTML = '';
+
+            // Clean drop areas
+            document.querySelectorAll('.drop-container').forEach(container => {
+                container.innerHTML = '';
+            });
+
+            // Shuffle data
+            const shuffled = [...situationsData].sort(() => Math.random() - 0.5);
+
+            // Render cards
+            shuffled.forEach(item => {
+                const card = createCardElement(item);
+                pool.appendChild(card);
+            });
+
+            setupDragAndDropEvents();
+            updateStats();
+        }
+
+        function createCardElement(item) {
+            const card = document.createElement('div');
+            card.className = 'glass-card p-3.5 rounded-xl cursor-grab active:cursor-grabbing border border-white/10 text-sm leading-snug flex items-start justify-between gap-3 shadow-md group relative';
+            card.setAttribute('draggable', 'true');
+            card.dataset.id = item.id;
+            card.dataset.category = item.category;
+
+            card.innerHTML = `
+                <div class="flex items-start gap-2.5">
+                    <span class="text-slate-400 group-hover:text-indigo-300 transition-colors mt-0.5">
+                        <i class="fa-solid fa-grip-vertical"></i>
+                    </span>
+                    <span class="text-slate-100 select-none">${item.text}</span>
+                </div>
+                <div class="status-badge hidden shrink-0 text-lg"></div>
+            `;
+
+            // Touch events setup for mobile support
+            card.addEventListener('touchstart', handleTouchStart, { passive: false });
+            card.addEventListener('touchmove', handleTouchMove, { passive: false });
+            card.addEventListener('touchend', handleTouchEnd);
+
+            return card;
+        }
+
+        function setupDragAndDropEvents() {
+            // HTML5 Drag Events
+            document.addEventListener('dragstart', (e) => {
+                if (e.target.getAttribute('draggable') === 'true') {
+                    draggedElement = e.target;
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                }
+            });
+
+            document.addEventListener('dragend', (e) => {
+                if (draggedElement) {
+                    draggedElement.classList.remove('dragging');
+                    draggedElement = null;
+                }
+            });
+
+            const dropZones = document.querySelectorAll('.drop-container, #situations-pool');
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.parentElement.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', (e) => {
+                    zone.parentElement.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.parentElement.classList.remove('drag-over');
+
+                    if (draggedElement) {
+                        zone.appendChild(draggedElement);
+                        clearValidationStyles(draggedElement);
+                        updateStats();
+                    }
+                });
+            });
+        }
+
+        /* Mobile Touch Drag Handler */
+        function handleTouchStart(e) {
+            touchActiveElement = this;
+            const touch = e.touches[0];
+
+            // Create Ghost
+            touchGhost = this.cloneNode(true);
+            touchGhost.classList.add('touch-ghost', 'w-72');
+            document.body.appendChild(touchGhost);
+
+            positionGhost(touch);
+            this.classList.add('opacity-40');
+        }
+
+        function handleTouchMove(e) {
+            if (!touchActiveElement || !touchGhost) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            positionGhost(touch);
+
+            // Highlight drag target under finger
+            const targetUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
+            document.querySelectorAll('.drop-zone').forEach(dz => dz.classList.remove('drag-over'));
+            
+            if (targetUnderFinger) {
+                const zone = targetUnderFinger.closest('.drop-zone');
+                if (zone) zone.classList.add('drag-over');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchActiveElement) return;
+
+            const touch = e.changedTouches[0];
+            const targetUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (touchGhost) {
+                touchGhost.remove();
+                touchGhost = null;
+            }
+
+            touchActiveElement.classList.remove('opacity-40');
+
+            document.querySelectorAll('.drop-zone').forEach(dz => dz.classList.remove('drag-over'));
+
+            if (targetUnderFinger) {
+                const dropContainer = targetUnderFinger.closest('.drop-container') || targetUnderFinger.closest('#situations-pool');
+                if (dropContainer) {
+                    dropContainer.appendChild(touchActiveElement);
+                    clearValidationStyles(touchActiveElement);
+                    updateStats();
+                }
+            }
+
+            touchActiveElement = null;
+        }
+
+        function positionGhost(touch) {
+            if (touchGhost) {
+                touchGhost.style.left = `${touch.clientX - 100}px`;
+                touchGhost.style.top = `${touch.clientY - 30}px`;
+            }
+        }
+
+        function clearValidationStyles(card) {
+            card.classList.remove('border-emerald-500', 'bg-emerald-500/20', 'border-rose-500', 'bg-rose-500/20');
+            const badge = card.querySelector('.status-badge');
+            if (badge) {
+                badge.classList.add('hidden');
+                badge.innerHTML = '';
+            }
+        }
+
+        function updateStats() {
+            const pool = document.getElementById('situations-pool');
+            const remaining = pool.children.length;
+            const placed = 9 - remaining;
+
+            document.getElementById('progress-text').textContent = `${placed}/9`;
+            document.getElementById('remaining-count').textContent = `${remaining} pendientes`;
+        }
+
+        function verifyAnswers() {
+            let correct = 0;
+            let incorrect = 0;
+            let unassigned = 0;
+
+            const pool = document.getElementById('situations-pool');
+            unassigned = pool.children.length;
+
+            const cards = document.querySelectorAll('.drop-container .glass-card');
+
+            cards.forEach(card => {
+                const parentContainer = card.closest('.drop-container');
+                const targetCategory = parentContainer.dataset.category;
+                const correctCategory = card.dataset.category;
+                const badge = card.querySelector('.status-badge');
+
+                badge.classList.remove('hidden');
+
+                if (targetCategory === correctCategory) {
+                    correct++;
+                    card.classList.remove('border-white/10', 'border-rose-500', 'bg-rose-500/20');
+                    card.classList.add('border-emerald-500', 'bg-emerald-500/20');
+                    badge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
+                } else {
+                    incorrect++;
+                    card.classList.remove('border-white/10', 'border-emerald-500', 'bg-emerald-500/20');
+                    card.classList.add('border-rose-500', 'bg-rose-500/20');
+                    badge.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-400"></i>`;
+                }
+            });
+
+            showModal(correct, incorrect, unassigned);
+        }
+
+        function showModal(correct, incorrect, unassigned) {
+            const modal = document.getElementById('result-modal');
+            const content = document.getElementById('modal-content');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-description');
+
+            document.getElementById('score-correct').textContent = correct;
+            document.getElementById('score-incorrect').textContent = incorrect + unassigned;
+
+            if (correct === 9) {
+                icon.className = "w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl shadow-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+                icon.innerHTML = '<i class="fa-solid fa-trophy"></i>';
+                title.textContent = '¡Excelente trabajo!';
+                desc.textContent = 'Has identificado correctamente todos los tipos de violencia según el Triángulo de la Violencia.';
+                
+                // Trigger Confetti
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+            } else if (correct >= 5) {
+                icon.className = "w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl shadow-xl bg-amber-500/20 text-amber-400 border border-amber-500/40";
+                icon.innerHTML = '<i class="fa-solid fa-star-half-stroke"></i>';
+                title.textContent = '¡Buen intento!';
+                desc.textContent = `Has clasificado correctamente ${correct} de 9 situaciones. Revisa las casillas marcadas en rojo e inténtalo de nuevo.`;
+            } else {
+                icon.className = "w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl shadow-xl bg-rose-500/20 text-rose-400 border border-rose-500/40";
+                icon.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                title.textContent = 'Sigue practicando';
+                desc.textContent = 'Recuerda: la violencia directa es visible, la estructural proviene de instituciones o normas, y la cultural de prejuicios o creencias sociales.';
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-90');
+            content.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('result-modal');
+            const content = document.getElementById('modal-content');
+
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-90');
+        }
+
+        function resetActivity() {
+            initActivity();
+        }
+    </script>
+</body>
+</html>
